@@ -1,0 +1,160 @@
+---
+title: "Random effects plots"
+author: "Marina Espinasse and Sara Rutten"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_depth: 2
+    toc_float: yes
+    number_sections: true
+    theme: cerulean
+    highlight: pygments
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+Load the selected no-interaction model
+
+```{r}
+source("04_crossbasis_definition.R")
+load("output/models/model.bc_ozone_vaccine.RData")
+```
+
+
+# Temporal random effects
+
+```{r}
+week_effect <- model$summary.random$T1[,c(1:4,6)]
+names(week_effect) <- c("week", "mean", "sd", "lower","upper")
+```
+
+
+```{r}
+
+plot_week_effect <-
+  ggplot() + 
+  geom_ribbon(data = week_effect,aes(x = week, ymin = lower, ymax = upper), 
+              fill = "indianred1", alpha = 0.5) + 
+  geom_line(data = week_effect,aes(x = week, y = mean), col = "indianred4") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey70") +
+  xlab("Week") +
+  ylab("Contribution to log(IR)") +
+  scale_y_continuous() +
+  scale_x_continuous(breaks = c(1,10,20,30,40,50,60,70)) +
+ # annotate(
+  #  x = 8, y = -3.5, label = "October 2020 \n \n I", geom = "text",
+ #   color = "red",
+ #   lineheight = .6,
+ #   vjust = .8
+ # ) +
+ #   annotate(
+ #   x = 42, y = -3.5, label = "June 2021 \n \n I", geom = "text",
+ #   color = "red",
+#    lineheight = .6,
+ #   vjust = .8
+ # ) +
+ #   annotate(
+ #   x = 68, y = -3.5, label = "November 2021 \n \n I", geom = "text",
+ #   color = "red",
+ #   lineheight = .6,
+ #   vjust = .8
+ # ) +
+  #  annotate(
+  #  x = 72, y = -3.2, label = "January 2022 \n \n \n \n I", geom = "text",
+   # color = "red",
+  #  lineheight = .6,
+  #  vjust = .8
+ # ) +
+  theme_bw() +
+  theme(axis.text = element_text(face = "bold"))
+  
+ggsave("figs/week_effect.pdf", height = 7, width = 8, units = "cm")
+```
+
+# Overlay effect with cases
+```{r}
+data <- read.csv(here("output", "master_dataset.csv"))
+data_sort <- data |> 
+  arrange(year, week_num)
+data_prep <- data_sort[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+```
+
+
+```{r}
+data_prep$tot_week_num = ifelse(data_prep$year==2020,
+                                data_prep$week_num-(52-num_week2020),
+                                ifelse(data_prep$year==2021,
+                                       data_prep$week_num+num_week2020,
+                                       data_prep$week_num+52+num_week2020))
+data_prep = data_prep %>% group_by(tot_week_num) %>% summarize(tot_cases = sum(cases_per_week))
+
+
+```
+
+```{r}
+data_prep$tot_cases_scale = (data_prep$tot_cases-min(data_prep$tot_cases))/(max(data_prep$tot_cases)-min(data_prep$tot_cases))*(max(week_effect$mean)-min(week_effect$mean))+min(week_effect$mean)
+
+plot_week_cases <-  ggplot() + 
+  geom_ribbon(data = week_effect,aes(x = week, ymin = lower, ymax = upper), 
+              fill = "indianred1", alpha = 0.5) + 
+  geom_line(data = week_effect,aes(x = week, y = mean), col = "indianred4") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey70") +
+  xlab("Week") +
+  ylab("Contribution to log(IR)") +
+  scale_y_continuous() +
+  scale_x_continuous(breaks = c(1,10,20,30,40,50)) +
+  theme_bw() +
+  theme(axis.text = element_text(face = "bold")) +
+  geom_line(data=data_prep, aes(x = tot_week_num, y = tot_cases_scale), col="darkseagreen4")+
+  scale_y_continuous(name="Contribution to log(IR)", sec.axis=sec_axis(~(.-min(week_effect$mean))*(max(data_prep$tot_cases)-min(data_prep$tot_cases))/(max(week_effect$mean)-min(week_effect$mean))+min(data_prep$tot_cases), name="cases per week")) +
+  theme(
+    axis.title.y.left=element_text(color="indianred4"),
+    axis.text.y.left=element_text(color="indianred4"),
+    axis.title.y.right=element_text(color="darkseagreen4"),
+    axis.text.y.right=element_text(color="darkseagreen4")
+  )
+
+```
+
+
+# Spatial random effect of a municipality
+
+```{r}
+map_sf <-st_as_sf(map)
+map_sf <- map_sf |> select(c(AdMuKey, geometry)) |> 
+  rename(mcp_code = AdMuKey)
+```
+
+
+There are 1162 random effects values but we need only 581 of them - the combination of u and v components.
+
+```{r}
+spatial <- model$summary.random$S1[c(1:581), c(1,2,3,4,6)]
+names(spatial) <- c("mcp_id", "mean", "sd", "lower", "upper")
+
+spatial <- spatial |>  left_join(mcp_index, by = "mcp_id") |> 
+  mutate(mcp_code = as.character(mcp_code)) 
+
+spatial_df <- left_join(map_sf, spatial, by =  "mcp_code")
+
+mn <-min(spatial_df$mean)
+mx <-max(spatial_df$mean)
+```
+
+```{r}
+plot_spatial <- ggplot(data = spatial_df) + 
+  geom_sf(aes(fill = mean)) +
+  scale_fill_distiller(palette = "PiYG", direction = -1, 
+                       limits = c(min(mn,-mx),max(mx,-mn))) +
+  labs(fill = "Contribution to \n log(IR)") +
+  theme_void() 
+  
+ggsave("figs/spatial_effect.pdf", height = 10, width = 15, units = "cm")
+```
+
