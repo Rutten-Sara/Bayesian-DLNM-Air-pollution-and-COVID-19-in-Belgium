@@ -19,11 +19,11 @@ The Rcode used in this paper is structured in several files:
 
 | File | Description |
 | --- | ---|
-| -- 00_covid19_exploration.Rmd | Exploration of Covid-19 and covariates data |
-| -- 01_data_preparation.Rmd | Preparation of COVID-19 and pollution data |
-| -- 02_visualise_data.Rmd | Data visualisation |
-| -- 03_sensitivity_analysis.Rmd | Sensitivity analysis of COVID-19 cases imputation |
-| -- 04_crossbasis_definition.Rmd | Preparation of crossbasis variables of pollution data for INLA models |
-| -- 05_run_models.Rmd | Running and comparing INLA models |
-| -- 06_noint_model_lagplots.Rmd | Model output and plots |
-| -- 07_noint_model_random_effects_plots.Rmd | Plots of random effects (spatial and temporal) |
+| 00_covid19_exploration.Rmd | Exploration of Covid-19 and covariates data |
+| 01_data_preparation.Rmd | Preparation of COVID-19 and pollution data |
+| 02_visualise_data.Rmd | Data visualisation |
+| 03_sensitivity_analysis.Rmd | Sensitivity analysis of COVID-19 cases imputation |
+| 04_crossbasis_definition.Rmd | Preparation of crossbasis variables of pollution data for INLA models |
+| 05_run_models.Rmd | Running and comparing INLA models |
+| 06_noint_model_lagplots.Rmd | Model output and plots |
+| 07_noint_model_random_effects_plots.Rmd | Plots of random effects (spatial and temporal) |
