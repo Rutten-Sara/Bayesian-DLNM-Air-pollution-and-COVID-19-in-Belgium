@@ -12,4 +12,4 @@ The raw data are not deposited due to their large size. Data can be downloaded o
 | Vaccination data | Weekly cumulative number of people vaccinated in Belgium | https://epistat.sciensano.be/ |
 | Population size | Population size of every Belgian municipality | https://statbel.fgov.be/en |
 
-
+## Rcode
