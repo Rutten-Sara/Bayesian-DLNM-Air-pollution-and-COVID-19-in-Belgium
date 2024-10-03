@@ -7,9 +7,9 @@ The raw data are not deposited due to their large size. Data can be downloaded o
 
 | Dataset | Description | Downloaded from |
 | --- | --- | --- |
-| COVID-19 cases | Number of COVID-19 cases in Belgium between 2020 and 2023 | https://epistat.sciensano.be/ |
-| Air pollution | Daily pollution concentrations in Belgium | https://www.irceline.be/en |
-| Vaccination data | Weekly cumulative number of people vaccinated in Belgium | https://epistat.sciensano.be/ |
+| COVID-19 cases | Number of COVID-19 cases in Belgium between 2020 and 2023 | https://epistat.sciensano.be/covid/ |
+| Air pollution | Daily pollution concentrations in Belgium | http://ftp.irceline.be/rio4x4/gemeente/ |
+| Vaccination data | Weekly cumulative number of people vaccinated in Belgium | https://epistat.sciensano.be/covid/ |
 | Population size | Population size of every Belgian municipality | https://statbel.fgov.be/en |
 
 A shape file of Belgium is available in the data folder.
