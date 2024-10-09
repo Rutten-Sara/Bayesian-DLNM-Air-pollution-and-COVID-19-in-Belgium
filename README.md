@@ -31,3 +31,4 @@ The Rcode used in this paper is structured in several files:
 | self_matched design.R | Additional analysis using case time series approach (self-matched design) |
 
 The map Additional Analyses contains the code to run a few additional analyses discussed in the Supplementary Materials.
+The models are not deposited due to their large size but they can be recovered using the available Rcode.
