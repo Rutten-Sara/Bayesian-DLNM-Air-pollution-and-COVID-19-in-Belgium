@@ -23,7 +23,7 @@ Load the selected no-interaction model
 
 ```{r}
 source("04_crossbasis_definition.R")
-load("output/models/model.bc_ozone_vaccine.RData")
+load("output/models/model.bc.RData")
 ```
 
 
@@ -75,51 +75,6 @@ plot_week_effect <-
   theme(axis.text = element_text(face = "bold"))
   
 ggsave("figs/week_effect.pdf", height = 7, width = 8, units = "cm")
-```
-
-# Overlay effect with cases
-```{r}
-data <- read.csv(here("output", "master_dataset.csv"))
-data_sort <- data |> 
-  arrange(year, week_num)
-data_prep <- data_sort[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
-```
-
-
-```{r}
-data_prep$tot_week_num = ifelse(data_prep$year==2020,
-                                data_prep$week_num-(52-num_week2020),
-                                ifelse(data_prep$year==2021,
-                                       data_prep$week_num+num_week2020,
-                                       data_prep$week_num+52+num_week2020))
-data_prep = data_prep %>% group_by(tot_week_num) %>% summarize(tot_cases = sum(cases_per_week))
-
-
-```
-
-```{r}
-data_prep$tot_cases_scale = (data_prep$tot_cases-min(data_prep$tot_cases))/(max(data_prep$tot_cases)-min(data_prep$tot_cases))*(max(week_effect$mean)-min(week_effect$mean))+min(week_effect$mean)
-
-plot_week_cases <-  ggplot() + 
-  geom_ribbon(data = week_effect,aes(x = week, ymin = lower, ymax = upper), 
-              fill = "indianred1", alpha = 0.5) + 
-  geom_line(data = week_effect,aes(x = week, y = mean), col = "indianred4") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey70") +
-  xlab("Week") +
-  ylab("Contribution to log(IR)") +
-  scale_y_continuous() +
-  scale_x_continuous(breaks = c(1,10,20,30,40,50)) +
-  theme_bw() +
-  theme(axis.text = element_text(face = "bold")) +
-  geom_line(data=data_prep, aes(x = tot_week_num, y = tot_cases_scale), col="darkseagreen4")+
-  scale_y_continuous(name="Contribution to log(IR)", sec.axis=sec_axis(~(.-min(week_effect$mean))*(max(data_prep$tot_cases)-min(data_prep$tot_cases))/(max(week_effect$mean)-min(week_effect$mean))+min(data_prep$tot_cases), name="cases per week")) +
-  theme(
-    axis.title.y.left=element_text(color="indianred4"),
-    axis.text.y.left=element_text(color="indianred4"),
-    axis.title.y.right=element_text(color="darkseagreen4"),
-    axis.text.y.right=element_text(color="darkseagreen4")
-  )
-
 ```
 
 

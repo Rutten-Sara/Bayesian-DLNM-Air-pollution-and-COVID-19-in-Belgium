@@ -64,7 +64,7 @@ For creating lags of pollution data and vaccination data, I will use `tsModel` p
 
 We observed strong positive correlation between pm10 and pm2.5, and between BC and NO2.
 It is possible that one of pollutants in each of these pairs will not be included in the final analysis, but we first can test them individually by comparing DIC. 
-For the vaccine data, numger of lags is 2 weeks at most, so it will be difficult to include vaccine in the same model as the pollutants. But we can try a separate model.
+For the vaccine data, number of lags is 2 weeks at most.
 
 ```{r}
 lag_ozone <- tsModel::Lag(data_sort$pollution_ozone_wk, group = data_sort$mcp_code, k = 0:nlag)
@@ -142,7 +142,7 @@ colnames(basis_vaccine) = paste0("basis_vaccine.", colnames(basis_vaccine))
 
 
 
-Define penalized complexity prior for spatial random effect and for temporal effect. Also define some other priors to investigate effect of changing prior.
+Define penalized complexity prior for spatial random effect and for temporal effect. Also define some other priors to investigate effect of changing prior (the original precision prior yields the best results).
 
 ```{r}
 precision.prior <- list(prec = list(prior = "pc.prec", param = c(0.5, 0.01)))
@@ -164,7 +164,7 @@ Municipalities in the map are sorted in the same way as in the master data, but 
 
 ```{r, message=F}
 # load shape file for Belgium
-map <- st_read("./data/belgium_shape/Apn_AdMu.shp")
+map <- st_read("data/belgium_shape/Apn_AdMu.shp")
 
 neig.map <- poly2nb(map,row.names = map$AdMuKey)
 ```
