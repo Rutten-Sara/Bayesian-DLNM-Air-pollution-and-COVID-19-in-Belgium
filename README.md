@@ -28,3 +28,6 @@ The Rcode used in this paper is structured in several files:
 | 05_run_models.Rmd | Running and comparing INLA models |
 | 06_noint_model_lagplots.Rmd | Model output and plots |
 | 07_noint_model_random_effects_plots.Rmd | Plots of random effects (spatial and temporal) |
+| self_matched design.R | Additional analysis using case time series approach (self-matched design) |
+
+The map Additional Analyses contains the code to run a few additional analyses discussed in the Supplementary Materials.
