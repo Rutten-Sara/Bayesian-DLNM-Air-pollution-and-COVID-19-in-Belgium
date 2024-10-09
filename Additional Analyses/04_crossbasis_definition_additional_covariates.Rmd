@@ -1,0 +1,266 @@
+---
+title: "Preparation of crossbasis variables of pollutaion data for INLA models"
+author: "Marina Espinasse and Sara Rutten"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_depth: 2
+    toc_float: yes
+    number_sections: true
+    theme: cerulean
+    highlight: pygments
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(INLA)
+library(tsModel)
+library(sf)
+library(spdep)
+library(sp)
+library(dlnm)
+library(RColorBrewer)
+```
+
+
+
+In this rmd file, I will prepare lags of the covariates (pollution and vaccination), and an adjacency matrix for inla models. Complete dataset for inla modelling will be saved in the "output" folder
+
+# Data
+
+Load master file on COVID-19 cases, population, and pollution per week.
+
+
+```{r}
+data <- read.csv(here("output", "master_dataset.csv"))
+```
+
+Arrange data by year and week number within each municipality
+
+```{r}
+data_sort <- data |> 
+  arrange(year, week_num)
+```
+
+# Population density
+```{r}
+map_key <- st_read("../data/belgium_shape/Apn_AdMu.shp") %>%
+  rename("mcp_code"="AdMuKey") %>%
+  mutate(mcp_code = as.numeric(mcp_code))
+
+data_sort <- left_join(data_sort, map_key, by = "mcp_code") %>%
+  mutate(pop_dens = pop_tot/Shape_Area*1000)
+
+dep <- read.csv("../data/deprivation.csv") %>%
+  rename("mcp_code"="municipality") %>%
+  mutate(mcp_code = as.numeric(mcp_code))%>%
+  mutate(avg_score = avg_score/100)
+
+data_sort <- left_join(data_sort, dep, by = "mcp_code") 
+
+```
+
+# Create lagged variables
+
+Set maximum lag to 8 weeks
+
+```{r}
+nlag = 8
+```
+
+For creating lags of pollution data and vaccination data, I will use `tsModel` package.
+
+We observed strong positive correlation between pm10 and pm2.5, and between BC and NO2.
+It is possible that one of pollutants in each of these pairs will not be included in the final analysis, but we first can test them individually by comparing DIC. 
+For the vaccine data, number of lags is 2 weeks at most.
+
+```{r}
+lag_ozone <- tsModel::Lag(data_sort$pollution_ozone_wk, group = data_sort$mcp_code, k = 0:nlag)
+lag_no2 <- tsModel::Lag(data_sort$pollution_no2_wk, group = data_sort$mcp_code, k = 0:nlag)
+lag_pm25 <- tsModel::Lag(data_sort$pollution_pm25_wk, group = data_sort$mcp_code, k = 0:nlag)
+lag_pm10 <- tsModel::Lag(data_sort$pollution_pm10_wk, group = data_sort$mcp_code, k = 0:nlag)
+lag_bc <- tsModel::Lag(data_sort$pollution_bc_wk, group = data_sort$mcp_code, k = 0:nlag)
+lag_vaccine <-tsModel::Lag(data_sort$vaccine_rate, group = data_sort$mcp_code, k = 0:2)
+```
+
+We have to remove the  weeks  of year 2020 and 2022 for which we will only have NA for covid19 response data.
+We needed these weeks in year 2020 only to create 8-weeks lags in the pollution variables.
+
+
+```{r}
+colSums(is.na(lag_ozone))
+lag_ozone <- lag_ozone[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+lag_no2 <- lag_no2[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+lag_bc <- lag_bc[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+
+lag_pm25 <- lag_pm25[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+lag_pm10 <- lag_pm10[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+
+
+lag_vaccine <- lag_vaccine[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+
+# remove weeks year 2020 from the main dataset
+data_prep <- data_sort[!((data_sort$year == 2020 & data_sort$week_num<=35) |(data_sort$year == 2022 & data_sort$week_num>=5)),]
+```
+
+
+# Defining cross-basis functions
+
+For know, we select simple functions. 1) for response-exposure dimension, we use natural splines with 2 knots (and 2+1=3 df), knots are equally spaced; 2) for lag-response dimension, we use 1 knot with (1 + 1 + intercept = 3 df). Total number of variables = 3*3=9.
+
+```{r}
+basis_ozone <- crossbasis(lag_ozone,
+                    argvar = list(fun = "ns", knots = equalknots(data_prep$pollution_ozone_wk, 2)),
+                    arglag = list(fun = "ns", knots = nlag/2))
+
+basis_no2 <-crossbasis(lag_no2,
+                    argvar = list(fun = "ns", knots = equalknots(data_prep$pollution_no2, 2)),
+                    arglag = list(fun = "ns", knots = nlag/2))
+  
+  
+basis_pm25 <- crossbasis(lag_pm25,
+                    argvar = list(fun = "ns", knots = equalknots(data_prep$pollution_pm25, 2)),
+                    arglag = list(fun = "ns", knots = nlag/2))
+  
+basis_pm10 <- crossbasis(lag_pm10,
+                    argvar = list(fun = "ns", knots = equalknots(data_prep$pollution_pm10, 2)),
+                    arglag = list(fun = "ns", knots = nlag/2))
+  
+basis_bc <-crossbasis(lag_bc,
+                    argvar = list(fun = "ns", knots = equalknots(data_prep$pollution_bc, 2)),
+                    arglag = list(fun = "ns", knots = nlag/2))
+
+basis_vaccine <- crossbasis(lag_vaccine,
+                    argvar = list(fun = "ns", knots = equalknots(data_prep$vaccine_rate, 2)),
+                    arglag = list(fun = "ns", knots = 1))#cannot use more than 1 knot for arglag
+```
+
+
+Column names for crossbasis function are the same for crossbasis of ozone, pm25, bc and other variables. Here I create unique column names.
+
+```{r}
+colnames(basis_ozone) = paste0("basis_ozone.", colnames(basis_ozone))
+colnames(basis_no2) = paste0("basis_no2.", colnames(basis_no2))
+colnames(basis_pm25) = paste0("basis_pm25.", colnames(basis_pm25))
+colnames(basis_pm10) = paste0("basis_pm10.", colnames(basis_pm10))
+colnames(basis_bc) = paste0("basis_bc.", colnames(basis_bc))
+colnames(basis_vaccine) = paste0("basis_vaccine.", colnames(basis_vaccine))
+```
+
+
+
+
+Define penalized complexity prior for spatial random effect and for temporal effect. 
+
+```{r}
+precision.prior <- list(prec = list(prior = "pc.prec", param = c(0.5, 0.01)))
+```
+
+INLA model function. Note that in the control.predictor we set link=1, this means we want a logit link function.
+
+
+
+
+# Create adjacency matrix and function for INLA models
+
+
+Municipalities in the map are sorted in the same way as in the master data, but to be sure, I will connect the map file and master data by creating a municipality id (chunk 16).
+
+```{r, message=F}
+# load shape file for Belgium
+map <- st_read("../data/belgium_shape/Apn_AdMu.shp")
+
+neig.map <- poly2nb(map,row.names = map$AdMuKey)
+```
+Convert the spatial object of neighbors to an inla object again
+
+```{r}
+adj.file <- "../output/adjacency.mat"
+if (!file.exists(adj.file)) nb2INLA(adj.file, neig.map)
+
+```
+
+```{r}
+mymodel <- function(formula, data = df, family = "poisson", config = FALSE)
+
+  {
+  model <- inla(formula = formula, data = data, family = family, offset = log(E),
+       control.inla = list(strategy = 'adaptive'), 
+       control.compute = list(dic = TRUE, config = config, 
+                              cpo = TRUE, return.marginals = FALSE),
+       control.fixed = list(correlation.matrix = TRUE, 
+                            prec.intercept = 1, prec = 1),
+       control.predictor = list(link = 1, compute = TRUE), 
+       verbose = FALSE)
+  model <- inla.rerun(model)
+  return(model)
+}
+```
+
+# Additional variables for a final dataframe
+
+Additional variables are total number of weeks (73), total number of municipalities (581), and provinces (11)
+
+```{r}
+# total number of weeks
+nweeks <- dim(data_prep %>% select(year,week_num)%>%unique())[1]
+#total number of muncipalities
+nmcp <- length(unique(data_prep$mcp_code))
+# total number of provinces
+nprov <- length(unique(data_prep$province))
+```
+
+Here I create a municipality identifier. I take the municipalities' codes as they are in the map file, turn them into a sequence from 1 to 581, and add this sequence to my dataset. This way, I will be sure that municipality ID in the adjacency matrix and in my dataset are identical.
+
+```{r}
+#index for municipality (run chunk 15 first!)
+mcp_index <- data.frame(
+  mcp_code = map$AdMuKey,
+  mcp_id = seq(1, length(map$AdMuKey))
+)
+mcp_index$mcp_code <- as.numeric(mcp_index$mcp_code)
+
+data_prep <- left_join(data_prep, mcp_index, by = "mcp_code")
+```
+
+
+Create final variables for INLA models. There is a variable  S1.T1 (municipality id  by week) - this is just an indicator variable for unique combinations of municipality and week, to model a spatial-temporal interaction. First, I concatenate S1 (municipality id) and week number, make this combination a factor and then a number from 1 to the number of combinations, so that, each combination is assigned a unique number (1 to 42413 = 581*73).
+
+We also need a copy of week identificator (T1), I will call it T1.1, to create phi_j random effect (iid) of week and to use it in the interaction type 1.
+```{r}
+num_week2020 = dim(data_prep %>% filter(year==2020) %>% select(week_num) %>%unique())[1]
+data_prep$tot_week_num = ifelse(data_prep$year==2020,
+                                data_prep$week_num-(52-num_week2020),
+                                ifelse(data_prep$year==2021,
+                                       data_prep$week_num+num_week2020,
+                                       data_prep$week_num+52+num_week2020))
+```
+
+```{r}
+Y <- data_prep$cases_per_week  #observed cases of COVID-19 per week
+N <- length(Y)  #total length of the dataset
+E <- data_prep$pop_tot/10^3  #for the incidence per 1000 population
+T1 <- data_prep$tot_week_num  #week indicator = week number
+S1 <- data_prep$mcp_id  #municipality indicator (1 to 581)
+T1.1 <-T1
+S1.T1 <- 1:nrow(data_prep)
+pop_dens <- data_prep$pop_dens
+avg_score <- data_prep$avg_score
+```
+
+Create a dataframe for model testing
+
+```{r}
+df <- data.frame(Y, E, T1,S1, T1.1, S1.T1, pop_dens, avg_score)
+```
+
+
