@@ -11,6 +11,7 @@ The raw data are not deposited due to their large size. Data can be downloaded o
 | Air pollution | Daily pollution concentrations in Belgium | http://ftp.irceline.be/rio4x4/gemeente/ |
 | Vaccination data | Weekly cumulative number of people vaccinated in Belgium | https://epistat.sciensano.be/covid/ |
 | Population size | Population size of every Belgian municipality | https://statbel.fgov.be/en |
+| deprivation index | Belgian index of multiple deprivation | originally downloaded from : https://www.sciensano.be/en/projects/belgian-index-multiple-deprivation but preprocessed file available in data folder |
 
 A shape file of Belgium is available in the data folder.
 
