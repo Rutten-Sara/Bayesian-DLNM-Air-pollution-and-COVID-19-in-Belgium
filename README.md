@@ -1,6 +1,6 @@
 # Bayesian distributed lag non-linear models (DLNM) to describe the association between air pollution and COVID-19 in Belgium
 ## About this repository
-This repository contains Rcodes used to generate the results from the paper "Bayesian distributed lag non-linear models (DLNM) to describe the association between air pollution and COVID-19 in Belgium.
+This repository contains Rcodes used to generate the results from the paper "Bayesian distributed lag non-linear models (DLNM) to describe the association between air pollution and COVID-19 in Belgium".
 
 ## Data
 The raw data are not deposited due to their large size. Data can be downloaded or made available on request. Following datasets are necessary to run the code:
