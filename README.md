@@ -1,4 +1,6 @@
 # Bayesian distributed lag non-linear models (DLNM) to describe the association between air pollution and COVID-19 in Belgium
+Sara Rutten, Marina Espinasse, Elisa Duarte, Thomas Neyens and Christel Faes
+
 ## About this repository
 This repository contains Rcodes used to generate the results from the paper "Bayesian distributed lag non-linear models (DLNM) to describe the association between air pollution and COVID-19 in Belgium".
 
