@@ -146,37 +146,5 @@ models <- lapply(1:length(formulas),
 
 
 
-# Additional covariates
-
-```{r}
-source(knitr::purl("04_crossbasis_definition_additional_covariates.rmd", quiet=TRUE)) #use when running for the 1st time
-#source("04_crossbasis_definition.R")
-```
-
-```{r}
-baseformula <- Y ~ f(T1,  model = "rw2", constr = TRUE, scale.model = TRUE, hyper = precision.prior) +
-  f(S1, model = "bym2",graph = "../output/adjacency.mat", scale.model = TRUE, hyper = precision.prior)
-
-formula.ozone <- update.formula(baseformula, ~ . + basis_ozone + basis_vaccine)
-formula.no2 <- update.formula(baseformula, ~ . + basis_no2 + basis_vaccine)
-formula.pm10 <- update.formula(baseformula, ~ . + basis_pm10 + basis_vaccine)
-formula.pm25 <- update.formula(baseformula, ~ . + basis_pm25 + basis_vaccine)
-formula.bc <- update.formula(baseformula, ~ . + basis_bc + basis_vaccine)
-```
-
-
-```{r}
-formulas <- list(formula.ozone, formula.no2, formula.pm10, formula.pm25, formula.bc)
-labels <- c("model.ozone", "model.no2", "model.pm10", "model.pm25", "model.bc")
-```
-
-Run all models and extract DIC, save the model output 
-
-```{r}
-models <- lapply(1:length(formulas), 
-              function(i) {
-                model <- mymodel(formulas[[i]], df)
-                save(model, file = paste0("../output/models/Additional covariates/", labels[i],".RData"))})
-```
 
 
